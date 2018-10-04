@@ -17,7 +17,8 @@ open Giraffe.Serialization
 
 let secret = "spadR2dre#u-ruBrC@TepA&*Uf@U"
 
-let switches = new Dictionary<string,LightSwitchCreateModel> ()
+let mutable key = 1
+let switches = new Dictionary<int, LightSwitchModel> ()
 
 let publicPath = Path.GetFullPath "../Client/public"
 let port = 8085us
@@ -46,15 +47,18 @@ let handleCreateLight =
             if model.Name |> String.IsNullOrWhiteSpace then 
                 ctx.SetStatusCode 401
                 return! text "Model name cannot be empty." next ctx
-            elif switches.ContainsKey model.Name then
+            elif switches.Values |> Seq.exists (fun v -> v.Name = model.Name) then
                 ctx.SetStatusCode 409
                 return! text (sprintf "The light with the name already exists: %s" model.Name) next ctx
             elif model.LifeSpan > 0 then
                 ctx.SetStatusCode 401
                 return! text "Life span must be greater than 0." next ctx
             else
-                switches.Add(model.Name, model)
-                return! json model next ctx
+                let keyId = key
+                key <- key + 1
+                let inserted = {Id=keyId;Name=model.Name;LifeSpan=model.LifeSpan;Cost=model.Cost;Switch=Off}
+                switches.Add(keyId, inserted)
+                return! json inserted next ctx
         }
 
 let handleSwitchLight =

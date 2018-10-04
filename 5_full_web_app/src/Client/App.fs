@@ -50,7 +50,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ToggleBurger -> 
         { model with ShowBurger=not model.ShowBurger }, Cmd.none
     | LoggedOut _, (Auth (LoginSuccess identity)) ->
-        { model with Identity=LoggedIn identity }, Cmd.none
+        { model with Identity=LoggedIn identity; Page=Pages.Page.Secured }, Cmd.none
     | LoggedOut u, Auth m -> 
         let identity, cmd = Authentication.update m u
         { model with Identity = LoggedOut identity }, cmd |> Cmd.map Auth
@@ -139,8 +139,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
         navbarView model.Identity model.ShowBurger dispatch
         Container.container [] [
             yield match model.Page with
-                  | Pages.Page.Login -> showAuth model.Identity dispatch
-                  | _                -> mainContent model dispatch
+                  | Pages.Page.Login   -> showAuth model.Identity dispatch
+                  | Pages.Page.Secured -> Container.container [] [ R.h3 [] [ R.str "You are secured" ]]
+                  | _                  -> mainContent model dispatch
             
             //R.h1 [] [ R.str (model.ErrorMsg |> getErrorMessage) ]
             //model.Identity |> showAuth dispatch

@@ -23,6 +23,13 @@ type IdentityData =
     { Username : string
       Token    : string }
 
+[<CLIMutable>]
+type LightSwitchModel = 
+    { Id       : int
+      Name     : string
+      LifeSpan : int 
+      Cost     : decimal 
+      Switch   : OnOff }
 
 
 module ApiUrls =
