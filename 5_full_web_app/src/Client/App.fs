@@ -19,16 +19,22 @@ type UserStatus =
     | LoggedIn of IdentityData
     | LoggedOut of LoginViewModel
 
+type PageModel =
+    | SecuredPage of Secured.Model
+    | HomePage
+    | LoginPage
+
 // Application Data
 type Model = { Identity   : UserStatus
-               Page       : Pages.Page
+               PageModel  : PageModel
                Light      : Light.Model
                ShowBurger : bool
-               ErrorMsg   : string option }
+               Error      : string option }
 
 type Msg = 
     | Auth of Authentication.Msg
     | Light of Light.Msg
+    | SecuredMsg of Secured.Msg
     | ChangePage of Pages.Page
     | ToggleBurger
     | LogOut
@@ -36,33 +42,56 @@ type Msg =
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
     { Identity=LoggedOut {Username="";Password=""} 
-      Page=Pages.Page.Home
+      PageModel=HomePage
       Light=Light.init()
-      ErrorMsg=None
+      Error=None
       ShowBurger=false }, Cmd.none
 
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =    
-    let model = {currentModel with ErrorMsg = None}
+    let model = {currentModel with Error = None}
+
     match model.Identity, msg with
-    | _, ChangePage p ->
-        { model with Page=p }, Cmd.none
+
+    | _, ChangePage Pages.Page.Home ->
+        { model with PageModel=HomePage }, Cmd.none
+
+    | _, ChangePage Pages.Page.Login ->
+        { model with PageModel=LoginPage }, Cmd.none
+
+    | LoggedIn identity, ChangePage Pages.Page.Secured ->
+        let m, cmd = Secured.init ()
+        { model with PageModel=SecuredPage m}, cmd identity.Token |> Cmd.map SecuredMsg 
+
     | _, ToggleBurger -> 
         { model with ShowBurger=not model.ShowBurger }, Cmd.none
+
     | LoggedOut _, (Auth (LoginSuccess identity)) ->
-        { model with Identity=LoggedIn identity; Page=Pages.Page.Secured }, Cmd.none
+        { model with Identity=LoggedIn identity }, Cmd.ofMsg (ChangePage Pages.Page.Secured)
+
     | LoggedOut u, Auth m -> 
         let identity, cmd = Authentication.update m u
         { model with Identity = LoggedOut identity }, cmd |> Cmd.map Auth
+
     | LoggedIn identity, (Light m) ->
         let light, cmd = Light.update identity m model.Light
         { model with Light=light }, cmd |> Cmd.map Light
+
+    | LoggedIn identity, (SecuredMsg msg) ->
+        match model.PageModel with
+        | SecuredPage m ->
+            let nm, cmd = Secured.update identity msg m
+            { model with PageModel=SecuredPage nm }, cmd |> Cmd.map SecuredMsg
+        | _ -> model, Cmd.none
+
     | _, (Auth (LoginError exn)) ->
-        { model with ErrorMsg = Some exn.Message }, Cmd.none
+        { model with Error = Some exn.Message }, Cmd.none
+
     | _, Auth ClickLogOut ->
         { model with Identity = LoggedOut (Authentication.init ())}, Cmd.none
+
     | _, (Light (Light.SwitchFailed e)) ->
-        { model with ErrorMsg=Some e.Message }, Cmd.none
+        { model with Error=Some e.Message }, Cmd.none
             
 
 
@@ -138,10 +167,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
         //yield header model dispatch
         navbarView model.Identity model.ShowBurger dispatch
         Container.container [] [
-            yield match model.Page with
-                  | Pages.Page.Login   -> showAuth model.Identity dispatch
-                  | Pages.Page.Secured -> Container.container [] [ R.h3 [] [ R.str "You are secured" ]]
-                  | _                  -> mainContent model dispatch
+            yield match model.PageModel with
+                  | LoginPage     -> showAuth model.Identity dispatch
+                  | SecuredPage m -> Secured.view m (SecuredMsg >> dispatch) //Container.container [] [ R.h3 [] [ R.str "You are secured" ]]
+                  | _             -> mainContent model dispatch
             
             //R.h1 [] [ R.str (model.ErrorMsg |> getErrorMessage) ]
             //model.Identity |> showAuth dispatch

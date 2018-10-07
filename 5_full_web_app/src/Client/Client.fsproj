@@ -10,6 +10,7 @@
         <Compile Include="Pages.fs" />
         <Compile Include="Views\Menu.fs" />
         <Compile Include="Pages\Home.fs" />
+        <Compile Include="Pages\Secured.fs" />
         <Compile Include="Pages\Light.fs" />
         <Compile Include="Authentication.fs" />
         <Compile Include="App.fs" />

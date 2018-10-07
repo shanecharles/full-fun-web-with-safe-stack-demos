@@ -38,3 +38,6 @@ module ApiUrls =
 
     [<Literal>]
     let Switch = "/api/switch"
+
+    [<Literal>]
+    let Lights = "/api/light"

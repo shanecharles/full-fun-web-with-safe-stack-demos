@@ -8,13 +8,6 @@ open Fable.Import
 open Fable.PowerPack
 module R = Fable.Helpers.React
 
-(*
-let viewLink page description =
-  R.a [ Style [ Padding "0 20px" ]
-        Href (Pages.toPath page)
-        OnClick goToUrl]
-      [ R.str description]
-*)
 let centerStyle direction =
     Style [ Display "flex"
             FlexDirection direction
