@@ -32,7 +32,7 @@ let init () : Model * Cmd<Msg> =
     let initialModel = { Counter = None }
     let loadCountCmd =
         Cmd.ofPromise
-            (fetchAs<int> "/api/init")
+            (fetchAs<Counter> "/api/init")
             []
             (Ok >> InitialCountLoaded)
             (Error >> InitialCountLoaded)
@@ -60,7 +60,7 @@ let safeComponents =
     let components =
         span [ ]
            [
-             a [ Href "https://saturnframework.github.io/docs/" ] [ str "Saturn" ]
+             a [ Href "https://saturnframework.github.io" ] [ str "Saturn" ]
              str ", "
              a [ Href "http://fable.io" ] [ str "Fable" ]
              str ", "
