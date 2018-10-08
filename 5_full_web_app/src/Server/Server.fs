@@ -96,7 +96,7 @@ let handleDeleteLight key =
                 | None   -> ctx.SetStatusCode 404
                             text (sprintf "Could not find light id %i" key) next ctx
                 | Some _ -> switches.Remove key |> ignore
-                            text (sprintf "Deleted light id %i" key) next ctx
+                            text (sprintf "%i" key) next ctx
         }
         
 

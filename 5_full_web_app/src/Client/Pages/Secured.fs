@@ -25,14 +25,16 @@ type Model =
 type Msg = 
     | SubmitNewLight
     | SubmitEditedLight
-    | EditLight   of LightSwitchModel
+    | EditLight    of LightSwitchModel
     | NewLight    
-    | ListLights  of LightSwitchModel list
-    | SetName     of string
-    | SetLifeSpan of int
-    | SetCost     of decimal 
-    | LightSaved  of LightSwitchModel
-    | LightFailed of exn
+    | ListLights   of LightSwitchModel list
+    | DeleteLight  of int
+    | SetName      of string
+    | SetLifeSpan  of int
+    | SetCost      of decimal 
+    | LightSaved   of LightSwitchModel
+    | LightDeleted of int
+    | LightFailed  of exn
 
 let requestProps httpMethod token content =
     let props =
@@ -81,6 +83,15 @@ let getLights token = promise {
         return! failwithf "%s" e.Message
 }
 
+let deleteLights token key = promise {
+    let url = sprintf "%s/%d" ApiUrls.Lights key
+    let props = requestProps HttpMethod.DELETE token None
+    try 
+        return! Fetch.fetchAs<int> url props
+    with e ->
+        return! failwithf "%s" e.Message
+}
+
 let getLightsCmd token =
     Cmd.ofPromise getLights token ListLights LightFailed
 
@@ -90,6 +101,9 @@ let getCreateLightCmd token model =
 let getUpdateLightCmd token model =
     Cmd.ofPromise (updateLight token) model LightSaved LightFailed
 
+let getDeleteLightCmd token key =
+    Cmd.ofPromise (deleteLights token) key LightDeleted LightFailed
+
 let newLight () = {Id=0;LifeSpan=0;Cost=0M;Switch=Off;Name=""}
 
 let init () =
@@ -97,6 +111,7 @@ let init () =
       Error    = None
       EditMode = New
       Light    = newLight ()}, getLightsCmd
+
 
 let update (identity : IdentityData) (msg : Msg) (currentModel : Model)  : Model * Cmd<Msg> =
     let model = { currentModel with Error = None }
@@ -134,6 +149,13 @@ let update (identity : IdentityData) (msg : Msg) (currentModel : Model)  : Model
     | NewLight ->
         { model with Light = newLight (); EditMode = New }, Cmd.none
 
+    | DeleteLight key ->
+        model, getDeleteLightCmd identity.Token key
+
+    | LightDeleted key ->
+        { model with Lights = model.Lights |> List.filter (fun l -> l.Id <> key) }, Cmd.none
+
+
 
 let textBox controlId placeholder defaultValue htmlType focus onChangeMsg dispatch =
     R.div [ ClassName "input-group input-group-lg" ] 
@@ -151,13 +173,19 @@ let textBox controlId placeholder defaultValue htmlType focus onChangeMsg dispat
             ]
           ]
 
-let editControls model msg dispatch =
-    R.div [ Id (sprintf "%A-%d" msg model.Id) ] 
-        [ textBox "Name" "Name" model.Name "text" true SetName dispatch
+let submitMode = function
+    | Edit -> SubmitEditedLight
+    | New  -> SubmitNewLight
+
+
+let editControls model editMode dispatch =
+    R.div [ ] 
+        [ R.div [ ClassName "is-size-3" ] [ R.str (string editMode) ]
+          textBox "Name" "Name" model.Name "text" true SetName dispatch
           textBox "LifeSpan" "Life Span" (string model.LifeSpan) "number" false SetLifeSpan dispatch
           textBox "Cost" "Cost" (string model.Cost) "text" false SetCost dispatch
           div [ ClassName "text-center" ] 
-                [ button [ ClassName "btn "; OnClick (fun _ -> dispatch msg) ]
+                [ button [ ClassName "btn "; OnClick (fun _ -> editMode |> submitMode |> dispatch) ]
                          [ str "Save" ] ] ]
 
     
@@ -166,20 +194,50 @@ let showError = function
     | None   -> R.div [] []
     | Some m -> R.div [ ClassName "error" ] [ R.str m ]
 
-let submitMode = function
-    | Edit -> SubmitEditedLight
-    | New  -> SubmitNewLight
+let lightCard dispatch (l : LightSwitchModel) =
+    R.div [ ClassName "column" ] 
+        [ R.div [ ClassName "box" ] [
+            R.div [ ClassName "columns" ] [
+                R.div [ ClassName "column" ] [
+                  a [ ClassName "button"; OnClick (fun _ -> dispatch (EditLight l))] [ 
+                        Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.Edit ]  
+                      ] ]
+              
+                R.div [ ClassName "column" ] [
+                  R.str l.Name ]
+              
+                R.div [ ClassName "column is-pulled-right"] [
+                  a [ ClassName "button is-pulled-right"; OnClick (fun _ -> dispatch (DeleteLight l.Id))] [ 
+                        Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.TrashO ] 
+                      ] ] ] ] ]
+
+let columnCards (ls : LightSwitchModel list) dispatch = 
+    let rec displayCards cards = 
+        seq {
+            match cards with
+            | l1 :: l2 :: l3 :: cs -> yield R.div [ClassName "columns" ] [ 
+                                             yield! [l1; l2; l3] |> Seq.map (lightCard dispatch) ]
+                                      yield! displayCards cs
+            | l1 :: l2 :: cs       -> yield R.div [ClassName "columns" ] [ 
+                                             yield! [l1; l2] |> Seq.map (lightCard dispatch) ]
+                                      yield! displayCards cs
+            | l1 :: cs             -> yield R.div [ClassName "columns"] [lightCard dispatch l1]
+                                      yield! displayCards cs
+            | []                   -> ()
+        }
+    displayCards ls 
+    |> Seq.toList
 
 let view (model : Model) dispatch =
     Container.container [] 
         [ model.Error |> showError
           R.div [] 
             [ R.div [] 
-                [ editControls model.Light (submitMode model.EditMode) dispatch ]
+                [ editControls model.Light model.EditMode dispatch ]
               R.div []
-                [ button [ ClassName "btn "; OnClick (fun _ -> dispatch NewLight) ] [ R.str "New" ]]
-              R.ul []
-                [ for l in model.Lights do 
-                    yield R.li [] [ button [ OnClick (fun _ -> dispatch (EditLight l))] [ R.str "Edit" ]; R.str l.Name ] ]
+                [ a [ ClassName "button"; OnClick (fun _ -> dispatch NewLight) ] [ 
+                      Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.PlusSquareO ]  
+                 ]]
+              R.div [] (columnCards model.Lights dispatch )
             ]
         ]

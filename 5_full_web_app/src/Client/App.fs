@@ -88,7 +88,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         { model with Error = Some exn.Message }, Cmd.none
 
     | _, Auth ClickLogOut ->
-        { model with Identity = LoggedOut (Authentication.init ())}, Cmd.none
+        { model with 
+            Identity  = LoggedOut (Authentication.init ())
+            PageModel = HomePage }, Cmd.none
 
     | _, (Light (Light.SwitchFailed e)) ->
         { model with Error=Some e.Message }, Cmd.none
@@ -158,7 +160,10 @@ let private navbarView identity isBurgerOpen dispatch =
 
 let mainContent (model : Model) (dispatch : Msg -> unit) =
     Container.container [] [
-
+        R.p [ ClassName "content is-size-1" ]
+            [ R.str "Lights R Us" ]
+        R.p [ ClassName "content is-size-4" ]
+            [ R.str "The premiere lighting store for the Internet of Things." ]
     ]
 
 
