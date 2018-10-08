@@ -123,18 +123,18 @@ let handleGetLights =
         let lights = switches.Values |> Seq.sortBy (fun l -> l.Id)
         json lights next ctx
 
-let handleSwitchLight =
+let handleSwitchLight key =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
-            let name = ctx.User.FindFirst ClaimTypes.NameIdentifier
-            printfn "name: %A" name |> ignore
-            if (name.Value = "admin") then
-                let! model = ctx.BindModelAsync<LightSwitchRequest>()
-                let newState = model.Light |> toggle
-                return! json ({Light=newState}) next ctx
-            else
-                ctx.SetStatusCode 403
-                return! text (sprintf "You are unauthorized %s" name.Value) next ctx
+            return!
+                match findLight key with
+                | None   -> ctx.SetStatusCode 404
+                            text (sprintf "Light ID %d not found" key) next ctx
+                | Some l -> 
+                    let remaining = l.LifeSpan - if l.Switch = Off then 0 else 1
+                    switches.[key] <- { l with Switch = toggle l.Switch; LifeSpan = remaining } 
+                    json (switches.[key]) next ctx
+
         }
 
 
@@ -153,14 +153,15 @@ let handlePostToken =
                 return! next ctx
 }
 
-let securedRouter = router {
+//let securedRouter = router {
     //pipe_through (Auth.requireAuthentication JWT)
-    post "" handleSwitchLight
-}
+  //  post "" handleSwitchLight
+//}
 
 let lightRouter = router {
     //pipe_through (Auth.requireAuthentication JWT)
     putf "/%i" handleUpdateLight
+    putf "/switch/%i" handleSwitchLight
     deletef "/%i" handleDeleteLight
     post "" handleCreateLight
     getf "/%i" handleGetLight 
@@ -174,7 +175,7 @@ let webApp = router {
     
     forward "/api/light" lightRouter
     post ApiUrls.Login handlePostToken
-    forward ApiUrls.Switch securedRouter
+    //forward ApiUrls.Switch securedRouter
     
 }
 

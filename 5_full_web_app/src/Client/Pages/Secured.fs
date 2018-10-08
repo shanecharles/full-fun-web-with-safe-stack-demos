@@ -26,7 +26,8 @@ type Msg =
     | SubmitNewLight
     | SubmitEditedLight
     | EditLight    of LightSwitchModel
-    | NewLight    
+    | NewLight
+    | Switch       of int
     | ListLights   of LightSwitchModel list
     | DeleteLight  of int
     | SetName      of string
@@ -92,6 +93,16 @@ let deleteLights token key = promise {
         return! failwithf "%s" e.Message
 }
 
+let switchLight token key = promise {
+    let url = sprintf "%s/switch/%d" ApiUrls.Lights key
+    let props = requestProps HttpMethod.PUT token None
+    try
+        return! Fetch.fetchAs<LightSwitchModel> url props
+    with e ->
+        return! failwithf "%s" e.Message
+
+}
+
 let getLightsCmd token =
     Cmd.ofPromise getLights token ListLights LightFailed
 
@@ -103,6 +114,9 @@ let getUpdateLightCmd token model =
 
 let getDeleteLightCmd token key =
     Cmd.ofPromise (deleteLights token) key LightDeleted LightFailed
+
+let getSwitchLightCmd token key = 
+    Cmd.ofPromise (switchLight token) key LightSaved LightFailed
 
 let newLight () = {Id=0;LifeSpan=0;Cost=0M;Switch=Off;Name=""}
 
@@ -152,6 +166,9 @@ let update (identity : IdentityData) (msg : Msg) (currentModel : Model)  : Model
     | DeleteLight key ->
         model, getDeleteLightCmd identity.Token key
 
+    | Switch key ->
+        model, getSwitchLightCmd identity.Token key
+
     | LightDeleted key ->
         { model with Lights = model.Lights |> List.filter (fun l -> l.Id <> key) }, Cmd.none
 
@@ -194,34 +211,73 @@ let showError = function
     | None   -> R.div [] []
     | Some m -> R.div [ ClassName "error" ] [ R.str m ]
 
+
+let lightState switch = 
+    match switch with 
+    | Off -> Fa.I.ToggleOff, ""
+    | On  -> Fa.I.ToggleOn, "icon has-text-warning"
+
 let lightCard dispatch (l : LightSwitchModel) =
-    R.div [ ClassName "column" ] 
+    Column.column [ ] 
         [ R.div [ ClassName "box" ] [
-            R.div [ ClassName "columns" ] [
-                R.div [ ClassName "column" ] [
+            Columns.columns [ ] [
+                Column.column [ ] [
                   a [ ClassName "button"; OnClick (fun _ -> dispatch (EditLight l))] [ 
                         Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.Edit ]  
                       ] ]
               
-                R.div [ ClassName "column" ] [
-                  R.str l.Name ]
+                Column.column [ ] [
+                  R.span [ ClassName "is-size-4" ] [ R.str l.Name ] ]
               
-                R.div [ ClassName "column is-pulled-right"] [
+                Column.column [ ] [
                   a [ ClassName "button is-pulled-right"; OnClick (fun _ -> dispatch (DeleteLight l.Id))] [ 
                         Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.TrashO ] 
-                      ] ] ] ] ]
+                      ] ] ] 
+
+            Columns.columns [] [
+                Column.column [] [
+                        R.span [ ClassName "is-pulled-right" ] [ R.str "Cost: " ]
+                    ]
+                
+                Column.column [] [
+                        R.span [ ClassName "" ] [ R.str (sprintf "$%.2M" l.Cost) ]
+                    ]
+                
+                Column.column [] [
+                        R.span [ ClassName "is-pulled-right" ] [ R.str "Life Span: " ]
+                    ]
+                
+                Column.column [] [
+                        R.span [ ClassName "" ] [ R.str (string l.LifeSpan) ]
+                    ]
+                ]
+            Columns.columns []
+                (l.Switch |> lightState
+                  |> (fun (icon, cn) ->  
+                        [ Column.column [ ] [
+                            R.span [ ClassName "is-pulled-right" ] [
+                              a [ OnClick (fun _ -> dispatch (Switch l.Id)) ] [
+                                Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon icon; Fa.fa3x ] ] ]
+                          ]
+
+                          Column.column [] [
+                            R.span [ ClassName cn ] [
+                            Icon.faIcon [ Icon.Size IsLarge ] [ Fa.icon Fa.I.LightbulbO; Fa.fa3x ] ]
+                          ] ]))
+            
+          ] ]
 
 let columnCards (ls : LightSwitchModel list) dispatch = 
     let rec displayCards cards = 
         seq {
             match cards with
-            | l1 :: l2 :: l3 :: cs -> yield R.div [ClassName "columns" ] [ 
+            | l1 :: l2 :: l3 :: cs -> yield Columns.columns [ ] [ 
                                              yield! [l1; l2; l3] |> Seq.map (lightCard dispatch) ]
                                       yield! displayCards cs
-            | l1 :: l2 :: cs       -> yield R.div [ClassName "columns" ] [ 
+            | l1 :: l2 :: cs       -> yield Columns.columns [ ] [ 
                                              yield! [l1; l2] |> Seq.map (lightCard dispatch) ]
                                       yield! displayCards cs
-            | l1 :: cs             -> yield R.div [ClassName "columns"] [lightCard dispatch l1]
+            | l1 :: cs             -> yield Columns.columns [] [lightCard dispatch l1]
                                       yield! displayCards cs
             | []                   -> ()
         }
