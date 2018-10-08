@@ -153,13 +153,8 @@ let handlePostToken =
                 return! next ctx
 }
 
-//let securedRouter = router {
-    //pipe_through (Auth.requireAuthentication JWT)
-  //  post "" handleSwitchLight
-//}
-
 let lightRouter = router {
-    //pipe_through (Auth.requireAuthentication JWT)
+    pipe_through (Auth.requireAuthentication JWT)
     putf "/%i" handleUpdateLight
     putf "/switch/%i" handleSwitchLight
     deletef "/%i" handleDeleteLight
@@ -175,8 +170,6 @@ let webApp = router {
     
     forward "/api/light" lightRouter
     post ApiUrls.Login handlePostToken
-    //forward ApiUrls.Switch securedRouter
-    
 }
 
 let configureSerialization (services:IServiceCollection) =
