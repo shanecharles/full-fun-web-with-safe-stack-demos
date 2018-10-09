@@ -3,26 +3,24 @@ module Client.App
 open Elmish
 open Elmish.React
 open Client
-open Fable.PowerPack
-open Fable.Core.JsInterop
 open Fable.Helpers.React.Props
 module R = Fable.Helpers.React
 open Shared
 open Authentication
-open Client.Style
 open Fulma 
 open Fulma.FontAwesome
-
 
 
 type UserStatus =
     | LoggedIn of IdentityData
     | LoggedOut of LoginViewModel
 
+
 type PageModel =
     | SecuredPage of Secured.Model
     | HomePage
     | LoginPage
+
 
 // Application Data
 type Model = { Identity   : UserStatus
@@ -102,6 +100,7 @@ let getErrorMessage = function
     | Some m -> m
     | None   -> ""    
 
+
 let showAuth identity (dispatch : Msg -> unit) =
     match identity with
     | LoggedOut u -> Authentication.view u (Auth >> dispatch)
@@ -110,11 +109,13 @@ let showAuth identity (dispatch : Msg -> unit) =
             [ R.str (sprintf "Welcome %s" d.Username) 
               R.button [ OnClick (fun _ -> dispatch (Auth Authentication.ClickLogOut)) ] [ R.str "Logout" ]]
 
+
 let showContent dispatch model =
     match model.Identity with 
     | LoggedOut _ -> R.div [] []
     | _ ->
         R.div [] [ Light.view model.Light (Light >> dispatch) ]
+
 
 let loginStatus identity dispatch = 
     match identity with 
@@ -126,6 +127,7 @@ let loginStatus identity dispatch =
             Navbar.Dropdown.div [ ]
                 [ Navbar.Item.a [ Navbar.Item.Props [ OnClick (fun _ -> dispatch (Auth Authentication.ClickLogOut)) ] ]
                     [ R.str "Logout" ] ] ]
+
 
 let private navbarEnd identity dispatch =
     Navbar.End.div [ ]
@@ -158,6 +160,7 @@ let private navbarView identity isBurgerOpen dispatch =
                   Navbar.menu [ Navbar.Menu.IsActive isBurgerOpen ]
                     [ navbarStart identity dispatch
                       navbarEnd identity dispatch ] ] ] ]
+
 
 let showHome (model : Model) (dispatch : Msg -> unit) =
     Container.container [] [

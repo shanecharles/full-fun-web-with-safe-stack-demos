@@ -215,7 +215,7 @@ let showError = function
 let lightState switch = 
     match switch with 
     | Off -> Fa.I.ToggleOff, ""
-    | On  -> Fa.I.ToggleOn, "icon has-text-warning"
+    | On  -> Fa.I.ToggleOn, "has-text-warning"
 
 let lightCard dispatch (l : LightSwitchModel) =
     Column.column [ ] 
