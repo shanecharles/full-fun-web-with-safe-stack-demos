@@ -25,9 +25,20 @@ let switches = Dictionary<int, LightSwitchModel> ()
     |> List.mapi (fun i ls ->  switches.[i+1] <- {Id=i+1;Name=ls.Name;Cost=ls.Cost;LifeSpan=ls.LifeSpan;Switch=Off})
     |> ignore
     
-    
-
 let mutable key = switches.Count + 1
+
+let toggle = function
+    | On  -> Off
+    | Off -> On
+
+let toOption = function
+    | true, v -> Some v
+    | _       -> None
+
+let findLight key =
+    switches.TryGetValue key
+    |> toOption
+
 
 let publicPath = Path.GetFullPath "../Client/public"
 let port = 8085us
@@ -43,18 +54,6 @@ let generateToken name =
     |> Auth.generateJWT (secret, SecurityAlgorithms.HmacSha256) issuer (DateTime.UtcNow.AddHours(1.0))
 
 
-
-let toggle = function
-    | On  -> Off
-    | Off -> On
-
-let toOption = function
-    | true, v -> Some v
-    | _       -> None
-
-let findLight key =
-    switches.TryGetValue key
-    |> toOption
 
 let handleCreateLight =
     fun (next : HttpFunc) (ctx : HttpContext) ->
@@ -137,8 +136,7 @@ let handleSwitchLight key =
 
         }
 
-
-let handlePostToken =
+let handleLogin =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let! model = ctx.BindJsonAsync<LoginViewModel>()
@@ -169,7 +167,7 @@ let webApp = router {
     not_found_handler (setStatusCode 404 >=> text "Not Found")
     
     forward "/api/light" lightRouter
-    post ApiUrls.Login handlePostToken
+    post ApiUrls.Login handleLogin
 }
 
 let configureSerialization (services:IServiceCollection) =
