@@ -39,6 +39,7 @@ type Msg =
     | ToggleBurger
     | LogOut
 
+
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
     { Identity=LoggedOut {Username="";Password=""} 
@@ -158,7 +159,7 @@ let private navbarView identity isBurgerOpen dispatch =
                     [ navbarStart identity dispatch
                       navbarEnd identity dispatch ] ] ] ]
 
-let mainContent (model : Model) (dispatch : Msg -> unit) =
+let showHome (model : Model) (dispatch : Msg -> unit) =
     Container.container [] [
         R.p [ ClassName "content is-size-1" ]
             [ R.str "Lights R Us" ]
@@ -169,17 +170,12 @@ let mainContent (model : Model) (dispatch : Msg -> unit) =
 
 let view (model : Model) (dispatch : Msg -> unit) =
     R.div [] [ 
-        //yield header model dispatch
         navbarView model.Identity model.ShowBurger dispatch
         Container.container [] [
             yield match model.PageModel with
                   | LoginPage     -> showAuth model.Identity dispatch
-                  | SecuredPage m -> Secured.view m (SecuredMsg >> dispatch) //Container.container [] [ R.h3 [] [ R.str "You are secured" ]]
-                  | _             -> mainContent model dispatch
-            
-            //R.h1 [] [ R.str (model.ErrorMsg |> getErrorMessage) ]
-            //model.Identity |> showAuth dispatch
-            //showContent model dispatch
+                  | SecuredPage m -> Secured.view m (SecuredMsg >> dispatch) 
+                  | _             -> showHome model dispatch
         ]
      ]
 
