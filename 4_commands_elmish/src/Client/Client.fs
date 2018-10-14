@@ -56,11 +56,12 @@ let getErrorMessage = function
 
 let view (model : Model) (dispatch : Msg -> unit) =
     R.div [] [ 
+        R.h1 [] [ R.str "Only names beginning with 'S' may change the lights." ]
         R.input [ OnChange (fun ev -> dispatch (User !!ev.target?value)) ]
-        R.h2 [] [ R.str (model.User |> function Some n -> n | _ -> "") ]
+        R.h3 [] [ R.str (model.User |> function Some n -> n | _ -> "") ]
         R.div [] [ R.button [ OnClick (fun _ -> dispatch Switch) ] [ R.str "Switch" ]
                    R.str (model.Light |> sprintf "%A") ]
-        R.h1 [] [ R.str (model.ErrorMsg |> getErrorMessage) ]
+        R.h3 [] [ R.str (model.ErrorMsg |> getErrorMessage) ]
      ]
 
 
