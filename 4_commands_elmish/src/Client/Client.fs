@@ -21,8 +21,17 @@ type Model = { User     : string option
 type Msg = 
     | Switch
     | User of string
-    | SwitchCompleted of unit
-    | SwitchFailed of exn
+    | SwitchSuccess of unit
+    | SwitchFail of exn
+
+let getErrorMessage = function
+    | Some m -> m
+    | None   -> ""    
+
+let toggle = function
+    | On  -> Off
+    | Off -> On
+
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
@@ -34,25 +43,18 @@ let switchLight user = promise {
     return ()
 }
 
-let toggle = function
-    | On  -> Off
-    | Off -> On
-
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =    
     match msg, currentModel with
     | Switch, {User=Some u} 
-        -> currentModel, Cmd.ofPromise switchLight u SwitchCompleted SwitchFailed
+        -> currentModel, Cmd.ofPromise switchLight u SwitchSuccess SwitchFail
     | User n, _       
         -> { currentModel with User = Some (n.ToUpper()); ErrorMsg=None }, Cmd.none
-    | SwitchCompleted (), {Light=light} 
+    | SwitchSuccess (), {Light=light} 
         -> { currentModel with Light=toggle light; ErrorMsg=None }, Cmd.none
-    | SwitchFailed e, _ 
+    | SwitchFail e, _ 
         -> { currentModel with ErrorMsg=Some e.Message }, Cmd.none
 
 
-let getErrorMessage = function
-    | Some m -> m
-    | None   -> ""    
 
 let view (model : Model) (dispatch : Msg -> unit) =
     R.div [] [ 

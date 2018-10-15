@@ -20,17 +20,22 @@ open LightApi
 open Giraffe.Serialization
 open Microsoft.WindowsAzure.Storage
 
+
+// Azure Settings
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
 let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
 let port = 8085us
 
+
+// Too lazy to setup DB access
 let switches = Dictionary<int, LightSwitchModel> ()
 
-
+// Populate data
 [ {Name="Default Light";LifeSpan=5;Cost=10.04M} ]
     |> List.mapi (fun i ls ->  switches.[i+1] <- {Id=i+1;Name=ls.Name;Cost=ls.Cost;LifeSpan=ls.LifeSpan;Switch=Off})
     |> ignore
+
     
 let issuer = "the-greatest-issuer"
 let secret = "spadR2dre#u-ruBrC@TepA&*Uf@U"
